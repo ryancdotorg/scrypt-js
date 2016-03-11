@@ -3,13 +3,18 @@
         <title>scrypt-js</title>
         <style type="text/css">
             body {
+               background: #f8f8f8;
+                color: #333;
                 margin: 40px 0;
             }
+
             body > div {
                 font-family: sans-serif;
                 margin-left: 50%;
             }
+
             body > div > div {
+                background: #fff;
                 border: 2px solid #888;
                 margin-left: -400px;
                 padding: 30px 20px 0;
@@ -19,6 +24,25 @@
             h1 {
                 margin: 0 0 30px 0;
                 text-align: center;
+            }
+
+            .forms {
+                float: right;
+                font-size: 14px;
+                padding-right: 10px;
+            }
+
+            .forms a {
+                color: #aaa;
+                cursor: pointer;
+            }
+
+            .forms b {
+                padding: 0 15px;
+            }
+
+            .forms .selected {
+                color: #333;
             }
 
             input {
@@ -51,7 +75,7 @@
                 
             }
     
-            .form > input {
+            input {
                 margin-bottom: 30px;
             }
 
@@ -85,7 +109,7 @@
             }
             
             #progressBar {
-                background: #ddf;
+                background: #ccf;
                 border-radius: 15px;
                 position: absolute;
                 left: 0;
@@ -109,27 +133,29 @@
         <div>
             <div>
                 <h1>scrypt-js</h1>
-                <div class="form">
-                    <div>Password</div>
+                <div>
+                    <div><b>Password</b> <span id="form-password" class="forms"><a class="form selected">UTF-8 (NFKC)</a><b>&bull;</b><a class="form">UTF-8 (NFKD)</a><b>&bull;</b><a class="form">hex</a></span></div>
                     <input id="pbkdf-password" type="text" value="password" />
-                    <div>Salt</div>
+                    
+                    <div><b>Salt</b> <span id="form-salt" class="forms"><a class="form selected">UTF-8 (NFKC)</a><b>&bull;</b><a class="form">UTF-8 (NFKD)</a><b>&bull;</b><a class="form">hex</a></span></div>
                     <input id="pbkdf-salt" type="text" value="salt" />
+                    
                     <div class="clearfix"></div>
                     <div>
                         <div class="param">
-                            <div>N</div>
-                            <input id="pbkdf-N" type="text" value="1024" />
+                            <div><b>Nlog2</b> [1, 63]</div>
+                            <input id="pbkdf-Nlog2" type="text" value="10" />
                         </div>
                         <div class="param">
-                            <div>r</div>
+                            <div><b>r</b></div>
                             <input id="pbkdf-r" type="text" value="8" />
                         </div>
                         <div class="param">
-                            <div>p</div>
+                            <div><b>p</b></div>
                             <input id="pbkdf-p" type="text" value="1" />
                         </div>
                         <div class="param">
-                            <div>dkLen</div>
+                            <div><b>dkLen</b></div>
                             <input id="pbkdf-dkLen" type="text" value="32" />
                         </div>
                     </div>
@@ -141,38 +167,98 @@
             </div>
         </div>
         <script src="index.js" type="text/javascript"></script>
-        <script src="https://wzrd.in/standalone/buffer" type="text/javascript"></script>
-        <script type="Text/javascript">
+        <script src="unorm.js" type="text/javascript"></script>
+        <script src="buffer.js" type="text/javascript"></script>
+        <script type="text/javascript">
             window.Buffer = buffer.SlowBuffer;
 
             function get(id) { return document.getElementById(id); }
+            function normalized(field) {
+                var value = get('pbkdf-' + field).value;
+                var forms = document.getElementById('form-' + field).getElementsByClassName('selected');
+                if (forms.length !== 1) { throw new Error('missing form'); }
+                var form = forms[0].innerHTML;
+
+                if (form.indexOf('NFKC') >= 0) {
+                    return new Buffer(value.normalize('NFKC'), 'utf8');
+                } else if (form.indexOf('NFKD') >= 0) {
+                    return new Buffer(value.normalize('NFKD'), 'utf8');
+                } else if (form.indexOf('hex') >= 0) {
+                    if (!value.match(/^[0-9A-F][0-9A-F]$/i)) {
+                        throw new Error(field + ': invalid hex string');
+                    }
+                    return new Buffer(value, 'hex');
+                }
+
+                throw new Error('Unknown ');
+            }
+
+            var firstLine = true;
+            function clearConsole() {
+                firstLine = true;
+                get('result').innerHTML = '';
+            }
+
+            function printConsole(message) {
+                if (!firstLine) { message = '<br /><br />' + message; }
+                firstLine = false;
+                get('result').innerHTML += message;
+            }
+
+            (function() {
+                var forms = document.getElementsByClassName('form');
+                for (var i = 0; i < forms.length; i++) {
+                    forms[i].onclick = (function(form) {
+                        return function() {
+                            console.log(form);
+                            var selected = form.parentNode.getElementsByClassName('selected')[0];
+                            selected.classList.remove('selected');
+                            form.classList.add('selected');
+                        };
+                    })(forms[i]);
+                }
+            })();
 
             var submit = get('pbkdf-submit');
 
             var done = null;
             submit.onclick = function() {
                 if (done === null) {
+                    clearConsole();
+
                     done = false;
 
-                    var password = get('pbkdf-password').value;
-                    var salt = get('pbkdf-salt').value;
-                    var N = get('pbkdf-N').value;
-                    var r = get('pbkdf-r').value;
-                    var p = get('pbkdf-p').value;
-                    var dkLen = get('pbkdf-dkLen').value;
+                    try {
+                        var password = normalized('password'); //get('pbkdf-password').value;
+                        var salt = normalized('salt');// get('pbkdf-salt').value;
+                        var N = 1 << parseInt(get('pbkdf-Nlog2').value);
+                        var r = get('pbkdf-r').value;
+                        var p = get('pbkdf-p').value;
+                        var dkLen = get('pbkdf-dkLen').value;
+                        console.log(password, salt)
+
+                    } catch (error) {
+                        printConsole(error.message);
+                        
+                        done = null;
+                        return;
+                    }
 
                     submit.classList.add('cancel');
                     submit.value = "Cancel scrypt";
 
-                    get('result').innerHTML = 'running...';
+                    printConsole('Started: N=' + N + ', r=' + r + ' p=' + p +
+                        ', password=0x' + password.toString('hex') + ', salt=0x' + salt.toString('hex'));
 
+                    var t0 = (new Date()).getTime();
                     scrypt(password, salt, N, r, p, dkLen, function(error, progress, key) {
 
                         if (error) {
-                            get('result').innerHTML = "Cancelled at " + parseInt(100 * progress) + "%";
+                            printConsole("Cancelled: " + parseInt(100 * progress) + "% done");
 
                         } else if (key) {
-                            get('result').innerHTML = key.toString('hex');
+                            printConsole("Generated: " + key.toString('hex'));
+                            printConsole("Complete: " + (((new Date()).getTime() - t0) / 1000) + 's');
                         }
 
                         if (error || key) {
@@ -188,7 +274,6 @@
                         
                         get('progressBar').style.width = parseInt(100 * progress) + '%';
                         get('progressAmount').innerHTML = parseInt(100 * progress) + '%';
-
                     });
 
                 } else if (done === false) {
