@@ -1,25 +1,30 @@
 scrypt
 ======
 
-The scrypt password-base key derivation function (pkbdf) is an algorithm for converting a human readable password into a fixed length of bytes, which can then be used as a key for symetric block ciphers, private keys. et cetera.
-
-The scrypt algorithm is, by design, expensive to execute, which increases the amount of time an attacker requires in order to brute force guess a password, adjustable by several parameters which can be tuned:
-- **N** - The general work factor; increasing this increases the difficulty of the overall derivation
-- **p** - The memory cost; increasing this increases the memory required during derivation
-- **r** - The parallelization factor; increasing the computation required during derivation
+The [scrypt](https://en.wikipedia.org/wiki/Scrypt) password-base key derivation function (pkbdf) is an algorithm designed to be brute-force resistant that converts human readable passwords into fixed length arrays of bytes, which can then be used as a key for symetric block ciphers, private keys, et cetera.
 
 ### Features:
 - **Non-blocking** - Gives other events in the event loop opportunities to run (asynchrorous)
 - **Cancellable** - If the key is not longer required, the computation can be cancelled
 - **Progress Callback** - Provides the current progress of key derivation as a percentage complete
 
+
 Todo
 ----
 
-These are all coming soon (as of 2016-03-11):
+These are all coming soon (as of 2016-03-12):
 - Remove browser dependency on slow buffer
 - Add test cases (from scrypt-async)
-- Improve the demo page
+
+
+Tuning
+------
+
+The scrypt algorithm is, by design, expensive to execute, which increases the amount of time an attacker requires in order to brute force guess a password, adjustable by several parameters which can be tuned:
+- **N** - The general work factor; increasing this increases the difficulty of the overall derivation
+- **p** - The memory cost; increasing this increases the memory required during derivation
+- **r** - The parallelization factor; increasing the computation required during derivation
+
 
 
 Installing
@@ -27,7 +32,7 @@ Installing
 
 **node.js**
 
-You should likely not use this module for *node.js* as there are many faster [alternatives](https://www.npmjs.com/package/scrypt), but if you so wish to:
+You should likely not use this module for *node.js* as there are many faster [alternatives](https://www.npmjs.com/package/scrypt), but if you so wish to do so:
 
 ```
 npm install scrypt-js
@@ -37,15 +42,50 @@ npm install scrypt-js
 **browser**
 
 ```html
-// coming soon
-<script src="" type="text/javascript"></script>
+<!-- This dependency will be removed soon -->
+<script src="https://wzrd.in/standalone/buffer" type="text/javascript"></script>
+        
+<script src="https://raw.githubusercontent.com/ricmoo/scrypt-js/master/index.js" type="text/javascript"></script>
 ```
 
 API
 ---
 
-```
-Coming soon.
+```html
+<html>
+  <body>
+    <!-- These two libraries are highly recommended for encoding password/salt -->
+    <script src="libs/buffer.js" type="text/javascript"></script>
+    <script src="libs/unorm.js" type="text/javascript"></script>
+    
+    <!-- This shim library greatly improves performance of the scrypt algorithm -->
+    <script src="libs/setImmediate.js" type="text/javascript"></script>
+
+    <script src="index.js" type="text/javascript"></script>
+    <script type="text/javascript">
+
+      // See the section below: "Encoding Notes"
+      var password = new buffer.SlowBuffer("anyPassword".normalize('NFKC'));
+      var salt = new buffer.SlowBuffer("someSalt".normalize('NFKC'));
+
+      var N = 1024, r = 8, p = 1;
+      var dkLen = 32;
+    
+      scrypt(password, salt, N, r, p, dkLen, function(error, progress, key) {
+        if (error) {
+          console.log("Error: " + error);
+
+        } else if (key) {
+          console.log("Found: " + key);
+
+        } else {
+          // update UI with progress complete
+          updateInterface(progress);
+        }
+      });
+    </script>
+  </body>
+</html>
 ```
 
 Encoding Notes
@@ -127,10 +167,22 @@ This code borrows **HEAVILY** from two other awesome <i>scrpt</i> libraries:
 - **scryptsy** - This is the basis for this implementation of the base hashing algorithm
 - **scrypt-async** - To remove the large dependency tree of pbkdf2 used in scryptsy, the custom (and highly performant) variant was used from this library
 
+
 License
 -------
 
 MIT license.
+
+
+References
+----------
+
+- [scrypt white paper](http://www.tarsnap.com/scrypt/scrypt.pdf)
+- [wikipedia](https://en.wikipedia.org/wiki/Scrypt)
+- [scrypt-async npm module](https://www.npmjs.com/package/scrypt-async)
+- [scryptsy npm module](https://www.npmjs.com/package/scryptsy)
+- [Unicode Equivalence](https://en.wikipedia.org/wiki/Unicode_equivalence)
+
 
 Donations
 ---------

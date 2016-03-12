@@ -319,6 +319,7 @@
 
         var totalOps = p * N * 2;
         var currentOp = 0;
+        var lastPercent10 = null;
 
         // Set this to true to abandon the scrypt on the next step
         var stop = false;
@@ -368,8 +369,12 @@
                     currentOp += steps;
 
                     // Call the callback with the progress (optionally stopping us)
-                    stop = callback(null, currentOp / totalOps);
-                    if (stop) { break; }
+                    var percent10 = parseInt(1000 * currentOp / totalOps);
+                    if (percent10 !== lastPercent10) {
+                        stop = callback(null, currentOp / totalOps);
+                        if (stop) { break; }
+                        lastPercent10 = percent10;
+                    }
 
                     if (i1 < N) {
                         break;
@@ -396,8 +401,12 @@
                     currentOp += steps;
 
                     // Call the callback with the progress (optionally stopping us)
-                    stop = callback(null, currentOp / totalOps);
-                    if (stop) { break; }
+                    var percent10 = parseInt(1000 * currentOp / totalOps);
+                    if (percent10 !== lastPercent10) {
+                        stop = callback(null, currentOp / totalOps);
+                        if (stop) { break; }
+                        lastPercent10 = percent10;
+                    }
 
                     if (i1 < N) {
                         break;

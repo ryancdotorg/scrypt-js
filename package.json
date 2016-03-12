@@ -1,8 +1,8 @@
 {
   "name": "scrypt-js",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "The scrypt password-based key derivation function with asynchronous operation and ablility to be cancelled.",
-  "main": "index.js",
+  "main": "scrypt.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -12,9 +12,7 @@
     "password",
     "async",
     "asynchronous",
-    "stepwise",
-    "pure",
-    "javascript"
+    "stepwise"
   ],
   "author": "Richard Moore <me@ricmoo.com>",
   "license": "MIT"
