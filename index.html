@@ -260,6 +260,7 @@
                             printConsole("Cancelled: " + parseInt(100 * progress) + "% done");
 
                         } else if (key) {
+                            key = new Buffer(key);
                             printConsole("Generated: " + key.toString('hex'));
                             printConsole("Complete: " + (((new Date()).getTime() - t0) / 1000) + 's');
                         }

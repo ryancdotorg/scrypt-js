@@ -1,10 +1,6 @@
 "use strict";
 
 (function(root) {
-
-    // If there was a previous object named scrypt, remember it
-    var previousScrypt = root.scrypt;
-
     var MAX_VALUE = 0x7fffffff;
 
     // The SHA256 and PBKDF2 implementation are from scrypt-async-js:
@@ -156,28 +152,28 @@
             dk = dk.concat(SHA256(outerKey.concat(SHA256(inner))).slice(0, dkLen));
         }
 
-        return new Buffer(dk);
+        return dk;
+        //return new Buffer(dk);
     }
 
     // The following is an adaptation of scryptsy
     // See: https://www.npmjs.com/package/scryptsy
-    function blockmix_salsa8(BY, Bi, Yi, r, B32, x, _X) {
+    function blockmix_salsa8(BY, Yi, r, x, _X) {
         var i;
 
-        arraycopy(BY, Bi + (2 * r - 1) * 64, _X, 0, 64);
-
+        arraycopy(BY, (2 * r - 1) * 16, _X, 0, 16);
         for (i = 0; i < 2 * r; i++) {
-            blockxor(BY, i * 64, _X, 0, 64);
-            salsa20_8(_X, B32, x);
-            arraycopy(_X, 0, BY, Yi + (i * 64), 64);
+            blockxor(BY, i * 16, _X, 16);
+            salsa20_8(_X, x);
+            arraycopy(_X, 0, BY, Yi + (i * 16), 16);
         }
 
         for (i = 0; i < r; i++) {
-            arraycopy(BY, Yi + (i * 2) * 64, BY, Bi + (i * 64), 64);
+            arraycopy(BY, Yi + (i * 2) * 16, BY, (i * 16), 16);
         }
 
         for (i = 0; i < r; i++) {
-            arraycopy(BY, Yi + (i * 2 + 1) * 64, BY, Bi + (i + r) * 64, 64);
+            arraycopy(BY, Yi + (i * 2 + 1) * 16, BY, (i + r) * 16, 16);
         }
     }
 
@@ -185,17 +181,8 @@
         return (a << b) | (a >>> (32 - b));
     }
 
-    function salsa20_8(B, B32, x) {
-
-        for (var i = 0; i < 16; i++) {
-            B32[i] = (B[i * 4 + 0] & 0xff) << 0;
-            B32[i] |= (B[i * 4 + 1] & 0xff) << 8;
-            B32[i] |= (B[i * 4 + 2] & 0xff) << 16;
-            B32[i] |= (B[i * 4 + 3] & 0xff) << 24;
-            // B32[i] = B.readUInt32LE(i*4)   <--- this is signficantly slower even in Node.js
-        }
-
-        arraycopy(B32, 0, x, 0, 16);
+    function salsa20_8(B, x) {
+        arraycopy(B, 0, x, 0, 16);
 
         for (var i = 8; i > 0; i -= 2) {
             x[ 4] ^= R(x[ 0] + x[12], 7);
@@ -233,61 +220,36 @@
         }
 
         for (i = 0; i < 16; ++i) {
-            B32[i] = x[i] + B32[i];
-        }
-
-        for (i = 0; i < 16; i++) {
-            var bi = i * 4
-            B[bi + 0] = (B32[i] >> 0 & 0xff)
-            B[bi + 1] = (B32[i] >> 8 & 0xff)
-            B[bi + 2] = (B32[i] >> 16 & 0xff)
-            B[bi + 3] = (B32[i] >> 24 & 0xff)
-            // B.writeInt32LE(B32[i], i*4)  //<--- this is signficantly slower even in Node.js
+            B[i] += x[i];
         }
     }
 
     // naive approach... going back to loop unrolling may yield additional performance
-    function blockxor(S, Si, D, Di, len) {
+    function blockxor(S, Si, D, len) {
         for (var i = 0; i < len; i++) {
-            D[Di + i] ^= S[Si + i]
+            D[i] ^= S[Si + i]
         }
     }
 
     function arraycopy(src, srcPos, dest, destPos, length) {
-    /*
-        if (Buffer.isBuffer(src) && Buffer.isBuffer(dest)) {
-            src.copy(dest, destPos, srcPos, srcPos + length);
-
-        } else {*/
-            while (length--) {
-                dest[destPos++] = src[srcPos++];
-            }
-//        }
+        while (length--) {
+            dest[destPos++] = src[srcPos++];
+        }
     }
 
-    function makeBuffer(value) {
-        if (typeof(value) === 'string') {
-            return new Buffer(value);
+    function checkBufferish(o) {
+        if (!o || typeof(o.length) !== 'number') {
+            return false;
+        }
+        for (var i = 0; i < o.length; i++) {
+            if (typeof(o[i]) !== 'number') { return false; }
 
-        } else if (Buffer.isBuffer(value)) {
-            return value;
-
-        } else if (value.length) {
-            var allBytes = true;
-            for (var i = 0; i < value.length; i++) {
-                var v = parseInt(value[i]);
-                if (v != value[i] || v < 0 || v >= 256) {
-                    allBytes = false;
-                    break;
-                }
-            }
-
-            if (allBytes) {
-                return new Buffer(value);
+            var v = parseInt(o[i]);
+            if (v != o[i] || v < 0 || v >= 256) {
+                return false;
             }
         }
-
-        throw new Error('invalid value (must be a buffer, array of bytes or string)');
+        return true;
     }
 
 
@@ -297,25 +259,39 @@
 
         if (!callback) { throw new Error('missing callback'); }
 
-        if (N === 0 || (N & (N - 1)) !== 0) { throw new Error('invalid parameter N'); }
+        if (N === 0 || (N & (N - 1)) !== 0) { throw new Error('N must be power of 2'); }
 
-        if (N > MAX_VALUE / 128 / r) { throw new Error('invalid parameter N'); }
-        if (r > MAX_VALUE / 128 / p) { throw new Error('invalid parameter r'); }
+        if (N > MAX_VALUE / 128 / r) { throw new Error('N too large'); }
+        if (r > MAX_VALUE / 128 / p) { throw new Error('r too large'); }
 
-        password = makeBuffer(password);
-        salt = makeBuffer(salt);
+        if (!checkBufferish(password)) {
+            throw new Error('password must be an array or buffer');
+        }
 
-        var XY = new Buffer(256 * r);
-        var V = new Buffer(128 * r * N);
+        if (!checkBufferish(salt)) {
+            throw new Error('salt must be an array or buffer');
+        }
+        password = new Buffer(password);
+        salt = new Buffer(salt);
 
-        var Yi = 128 * r;
+        var b = PBKDF2_HMAC_SHA256_OneIter(password, salt, p * 128 * r);
+        var B = new Int32Array(p * 32 * r)
+        for (var i = 0; i < B.length; i++) {
+            var j = i * 4;
+            B[i] = ((b[j + 3] & 0xff) << 24) |
+                   ((b[j + 2] & 0xff) << 16) |
+                   ((b[j + 1] & 0xff) << 8) |
+                   ((b[j + 0] & 0xff) << 0);
+        }
+
+        var XY = new Int32Array(64 * r);
+        var V = new Int32Array(32 * r * N);
+
+        var Yi = 32 * r;
 
         // scratch space
-        var B32 = new Int32Array(16); // salsa20_8
-        var x = new Int32Array(16);   // salsa20_8
-        var _X = new Buffer(64);      // blockmix_salsa8
-
-        var B = PBKDF2_HMAC_SHA256_OneIter(password, salt, p * 128 * r);
+        var x = new Int32Array(16);       // salsa20_8
+        var _X = new Int32Array(16);      // blockmix_salsa8
 
         var totalOps = p * N * 2;
         var currentOp = 0;
@@ -327,13 +303,13 @@
         // State information
         var state = 0;
         var i0 = 0, i1;
-        var Bi, Xi;
+        var Bi;
 
         // How many blockmix_salsa8 can we do per step?
         var limit = parseInt(1000 / r);
 
         // Trick from scrypt-async; if there is a setImmediate shim in place, use it
-        var nextTick = (typeof setImmediate !== 'undefined') ? setImmediate : setTimeout;
+        var nextTick = (typeof(setImmediate) !== 'undefined') ? setImmediate : setTimeout;
 
         // This is really all I changed; making scryptsy a state machine so we occasionally
         // stop and give other evnts on the evnt loop a chance to run. ~RicMoo
@@ -345,23 +321,23 @@
             switch (state) {
                 case 0:
                     // for (var i = 0; i < p; i++)...
-                    Bi = i0 * 128 * r;
+                    Bi = i0 * 32 * r;
 
-                    Xi = 0;
-                    B.copy(XY, Xi, Bi, Bi + Yi);                     // ROMix - 1
+                    arraycopy(B, Bi, XY, 0, Yi);                       // ROMix - 1
 
-                    state = 1;                                       // Move to ROMix 2
+                    state = 1;                                         // Move to ROMix 2
                     i1 = 0;
 
                     // Fall through
 
                 case 1:
+
                     // Run up to 1000 steps of the first inner smix loop
                     var steps = N - i1;
                     if (steps > limit) { steps = limit; }
-                    for (var i = 0; i < steps; i++) {                // ROMix - 2
-                        XY.copy(V, (i1 + i) * Yi, Xi, Xi + Yi);      // ROMix - 3
-                        blockmix_salsa8(XY, Xi, Yi, r, B32, x, _X);  // ROMix - 4
+                    for (var i = 0; i < steps; i++) {                  // ROMix - 2
+                        arraycopy(XY, 0, V, (i1 + i) * Yi, Yi)         // ROMix - 3
+                        blockmix_salsa8(XY, Yi, r, x, _X);             // ROMix - 4
                     }
 
                     // for (var i = 0; i < N; i++)
@@ -386,14 +362,15 @@
                     // Fall through
 
                 case 2:
+
                     // Run up to 1000 steps of the second inner smix loop
                     var steps = N - i1;
                     if (steps > limit) { steps = limit; }
                     for (var i = 0; i < steps; i++) {                // ROMix - 6
-                        var offset = Xi + (2 * r - 1) * 64;          // ROMix - 7
-                        var j = XY.readUInt32LE(offset) & (N - 1);
-                        blockxor(V, j * Yi, XY, Xi, Yi);             // ROMix - 8 (inner)
-                        blockmix_salsa8(XY, Xi, Yi, r, B32, x, _X);  // ROMix - 9 (outer)
+                        var offset = (2 * r - 1) * 16;               // ROMix - 7
+                        var j = XY[offset] & (N - 1);
+                        blockxor(V, j * Yi, XY, Yi);                 // ROMix - 8 (inner)
+                        blockmix_salsa8(XY, Yi, r, x, _X);           // ROMix - 9 (outer)
                     }
 
                     // for (var i = 0; i < N; i++)...
@@ -412,7 +389,7 @@
                         break;
                     }
 
-                    XY.copy(B, Bi, Xi, Xi + Yi);                   // ROMix - 10
+                    arraycopy(XY, 0, B, Bi, Yi);                     // ROMix - 10
 
                     // for (var i = 0; i < p; i++)...
                     i0++;
@@ -421,8 +398,21 @@
                         break;
                     }
 
+                    b = [];
+                    for (var i = 0; i < B.length; i++) {
+                        b.push((B[i] >>  0) & 0xff);
+                        b.push((B[i] >>  8) & 0xff);
+                        b.push((B[i] >> 16) & 0xff);
+                        b.push((B[i] >> 24) & 0xff);
+                    }
+
+                    var derivedKey = PBKDF2_HMAC_SHA256_OneIter(password, b, dkLen);
+                    //if (typeof(Buffer) !== 'undefined') {
+                    //    derivedKey = new Buffer(derivedKey);
+                    //}
+
                     // Done; don't break (which would reschedule)
-                    return callback(null, 1.0, PBKDF2_HMAC_SHA256_OneIter(password, B, dkLen));
+                    return callback(null, 1.0, derivedKey);
                 }
 
                 // Schedule the next steps
@@ -433,17 +423,23 @@
             incrementalSMix();
     }
 
+    // node.js
     if (typeof(exports) !== 'undefined') {
-       // node.js
        module.exports = scrypt;
 
+    // RequireJS/AMD
+    // http://www.requirejs.org/docs/api.html
+    // https://github.com/amdjs/amdjs-api/wiki/AMD
+    } else if (typeof(define) === 'function' && define.amd) {
+        define(scrypt);
+
+    // Web Browsers
     } else {
-        // Browser
         root.scrypt = scrypt;
 
-        // If there was something else named scrypt, make sure it is still reachable
-        if (previousScrypt) {
-            root.scrypt._previousScrypt = previousScrypt;
+        // If there was an existing library "scrypt", make sure it is still available
+        if (root && root.scrypt) {
+            root._scrypt = root.scrypt;
         }
     }
 

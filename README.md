@@ -9,14 +9,6 @@ The [scrypt](https://en.wikipedia.org/wiki/Scrypt) password-base key derivation 
 - **Progress Callback** - Provides the current progress of key derivation as a percentage complete
 
 
-Todo
-----
-
-These are all coming soon (as of 2016-03-12):
-- Remove browser dependency on slow buffer
-- Add test cases (from scrypt-async)
-
-
 Tuning
 ------
 
@@ -45,7 +37,7 @@ npm install scrypt-js
 <!-- This dependency will be removed soon -->
 <script src="https://wzrd.in/standalone/buffer" type="text/javascript"></script>
         
-<script src="https://raw.githubusercontent.com/ricmoo/scrypt-js/master/index.js" type="text/javascript"></script>
+<script src="https://raw.githubusercontent.com/ricmoo/scrypt-js/master/scrypt.js" type="text/javascript"></script>
 ```
 
 API
@@ -160,12 +152,19 @@ One quick story I will share is a project which used the `SHA256(encodeURI(passw
 **See:** [Unicode Equivalence](https://en.wikipedia.org/wiki/Unicode_equivalence)
 
 
-Based On
---------
+Tests
+-----
 
-This code borrows **HEAVILY** from two other awesome <i>scrpt</i> libraries:
-- **scryptsy** - This is the basis for this implementation of the base hashing algorithm
-- **scrypt-async** - To remove the large dependency tree of pbkdf2 used in scryptsy, the custom (and highly performant) variant was used from this library
+The test cases from the [scrypt whitepaper](http://www.tarsnap.com/scrypt/scrypt.pdf) are included in `test/test-vectors.json` and can be run using:
+
+```javascript
+npm test
+```
+
+Special Thanks
+--------------
+
+I would like to thank @dchest for his [scrypt-async](https://github.com/dchest/scrypt-async-js) library and for his assistance providing feedback and optimization suggestions.
 
 
 License
