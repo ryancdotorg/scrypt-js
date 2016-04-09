@@ -275,7 +275,7 @@
         salt = new Buffer(salt);
 
         var b = PBKDF2_HMAC_SHA256_OneIter(password, salt, p * 128 * r);
-        var B = new Int32Array(p * 32 * r)
+        var B = new Uint32Array(p * 32 * r)
         for (var i = 0; i < B.length; i++) {
             var j = i * 4;
             B[i] = ((b[j + 3] & 0xff) << 24) |
@@ -284,14 +284,14 @@
                    ((b[j + 0] & 0xff) << 0);
         }
 
-        var XY = new Int32Array(64 * r);
-        var V = new Int32Array(32 * r * N);
+        var XY = new Uint32Array(64 * r);
+        var V = new Uint32Array(32 * r * N);
 
         var Yi = 32 * r;
 
         // scratch space
-        var x = new Int32Array(16);       // salsa20_8
-        var _X = new Int32Array(16);      // blockmix_salsa8
+        var x = new Uint32Array(16);       // salsa20_8
+        var _X = new Uint32Array(16);      // blockmix_salsa8
 
         var totalOps = p * N * 2;
         var currentOp = 0;
