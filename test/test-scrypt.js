@@ -21,7 +21,7 @@ function makeTest(options) {
 
             } else if (key) {
                 key = new Buffer(key);
-                test.ok(derivedKeyHex === key.toString('hex'), 'failed to generate correct derived key');
+                test.equal(derivedKeyHex, key.toString('hex'), 'failed to generate correct derived key');
                 test.done();
             } else {
             }

@@ -252,12 +252,23 @@
         return true;
     }
 
+    function ensureInteger(value, name) {
+        var intValue = parseInt(value);
+        if (value != intValue) { throw new Error('invalid ' + name); }
+        return intValue;
+    }
 
     // N = Cpu cost, r = Memory cost, p = parallelization cost
     // callback(error, progress, key)
     function scrypt(password, salt, N, r, p, dkLen, callback) {
 
         if (!callback) { throw new Error('missing callback'); }
+
+        N = ensureInteger(N, 'N');
+        r = ensureInteger(r, 'r');
+        p = ensureInteger(p, 'p');
+
+        dkLen = ensureInteger(dkLen, 'dkLen');
 
         if (N === 0 || (N & (N - 1)) !== 0) { throw new Error('N must be power of 2'); }
 
@@ -434,13 +445,14 @@
         define(scrypt);
 
     // Web Browsers
-    } else {
-        root.scrypt = scrypt;
+    } else if (root) {
 
         // If there was an existing library "scrypt", make sure it is still available
-        if (root && root.scrypt) {
+        if (root.scrypt) {
             root._scrypt = root.scrypt;
         }
+
+        root.scrypt = scrypt;
     }
 
 })(this);

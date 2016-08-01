@@ -34,9 +34,6 @@ npm install scrypt-js
 **browser**
 
 ```html
-<!-- This dependency will be removed soon -->
-<script src="https://wzrd.in/standalone/buffer" type="text/javascript"></script>
-        
 <script src="https://raw.githubusercontent.com/ricmoo/scrypt-js/master/scrypt.js" type="text/javascript"></script>
 ```
 
@@ -125,7 +122,7 @@ Certain strings are often displayed the same, even though they may have differen
 'I'
 > 'I'
 'I'
-> 'u2160' === 'I'
+> '\u2160' === 'I'
 false
 > '\u2160'.normalize('NFKC') === 'I'
 true

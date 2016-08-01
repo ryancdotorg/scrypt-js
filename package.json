@@ -1,6 +1,6 @@
 {
   "name": "scrypt-js",
-  "version": "2.0.0",
+  "version": "2.0.2",
   "description": "The scrypt password-based key derivation function with asynchronous operation and ablility to be cancelled.",
   "main": "scrypt.js",
   "scripts": {
@@ -18,5 +18,9 @@
     "stepwise"
   ],
   "author": "Richard Moore <me@ricmoo.com>",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/ricmoo/scrypt-js.git"
+  },
   "license": "MIT"
 }
