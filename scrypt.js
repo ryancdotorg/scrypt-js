@@ -153,7 +153,6 @@
         }
 
         return dk;
-        //return new Buffer(dk);
     }
 
     // The following is an adaptation of scryptsy
@@ -282,8 +281,6 @@
         if (!checkBufferish(salt)) {
             throw new Error('salt must be an array or buffer');
         }
-        password = new Buffer(password);
-        salt = new Buffer(salt);
 
         var b = PBKDF2_HMAC_SHA256_OneIter(password, salt, p * 128 * r);
         var B = new Uint32Array(p * 32 * r)
@@ -418,9 +415,6 @@
                     }
 
                     var derivedKey = PBKDF2_HMAC_SHA256_OneIter(password, b, dkLen);
-                    //if (typeof(Buffer) !== 'undefined') {
-                    //    derivedKey = new Buffer(derivedKey);
-                    //}
 
                     // Done; don't break (which would reschedule)
                     return callback(null, 1.0, derivedKey);
